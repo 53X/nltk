@@ -1,4 +1,4 @@
-''' UTILITY Functions'''
+''' UTILITY Functions for ROUGE score for Machine Translation'''
 
 
 def jacknifing(score_list, averaging=True):
@@ -18,12 +18,12 @@ def jacknifing(score_list, averaging=True):
         elif((len(score_list) > 1) and (averaging is False)):
             return score_list
         else:
-            average = []
             '''
             average : store the maximum scores
-            from the m combos of m-1 scores.
-            Here m is the len(score_list)
+            from the m different sets of m-1 scores.
+            such that m is the len(score_list)
             '''
+            average = []
             for i in score_list:
                 # dummy : list a particular combo of m-1 scores
                 dummy = [j for j in score_list if i != j]
@@ -40,7 +40,7 @@ def f(k):
     return k**0.5
 
 
-def rouge_lcs(X, Y, weighted=True, return_string=False):
+def rouge_lcs(X, Y, weighted=False, return_string=False):
     '''This function returns the longest common subsequence
     of two strings using the dynamic programming algorithm.
 
