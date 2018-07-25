@@ -4,12 +4,13 @@ http://www.aclweb.org/anthology/W04-1013
 '''
 
 from nltk.util import ngrams, skipgrams
-from nltk.translate.util import jacknifing, rouge_lcs
+from util import jacknifing, rouge_lcs
 import numpy as np
 
 
-def get_score(r_lcs, p_lcs, beta):
-    '''This is a scoring function implementing the
+def get_score(r_lcs, p_lcs, beta=1):
+    '''
+    This is a scoring function implementing the
     F-measure score used in the paper.
     Here:
     
@@ -22,6 +23,14 @@ def get_score(r_lcs, p_lcs, beta):
     :param p_lcs : precision factor
     :type p_lcs : float
 
+    
+    According to the paper the formula for the
+    F-measure score goes as :
+
+    
+    (1+beta**2)*r_lcs*p_lcs)/(r_lcs+(beta**2)*p_lcs)
+
+    
     '''
     try:
         return ((1+beta**2)*r_lcs*p_lcs)/(r_lcs+(beta**2)*p_lcs)
@@ -47,30 +56,66 @@ def rouge_n(references, candidate, n, averaging=True):
     :param averaging : Jacknifing occurs if averaging is True
     :type averaging : Boolean
     
-    ngram_cand : list of ngrams in candidate
+    ngram_cand : generator of ngrams in candidate
     
     ngram_ref : list of ngrams in reference
     
-    r_lcs : recall factor
-    
-    p_lcs : precision factor
-    
     rouge_recall : list containing all the rouge-n scores for
                    every reference against the candidate
+
+    
+
+    
+    
+    For a given candidate sentence and a reference sentence the 
+    ROUGE-N score is calculated as follows:
+
+    Let,
+
+    matches = no. of matching n_grams btw the candidate and the reference
+    total_ngram = total no. of ngrams in the reference 
+
+    Then,
+
+    ROUGE_N = matches/total_ngram
+
+    If multiple references are present , then Jacknifing procedure is 
+    used.
+
+    
+
+
+    >>> reference = 'police killed the gunman'
+    >>> candidate_1 = 'police kill the gunman'
+    >>> candidate_2 = 'the gunman kill police'
+    >>> ref_list = [reference.split(' ')]
+
+
+    >>> round(rouge_n(ref_list, candidate_1.split(' '), n=2), 2)
+    0.33
+
+    >>> round(rouge_n(ref_list, candidate_2.split(' '), n=2), 2)
+    0.33
+
+
     '''
-    ngam_cand = list(ngrams(candidate), n)
+    ngram_cand = ngrams(candidate, n)
     rouge_recall = []
     for ref in references:
-        count = 0  #variable counting the no.of matching ngrams
+        matches = 0  #variable counting the no.of matching ngrams
         ngram_ref = list(ngrams(ref, n))
         for ngr in ngram_cand:
             if ngr in ngram_ref:
-                count += 1 
-        rouge_recall.append(count/len(ngram_ref))
+                matches += 1 
+        rouge_recall.append(matches/len(ngram_ref))
     return jacknifing(rouge_recall, averaging=averaging)
 
 
-def sentence_rouge_l(references, candidate, beta, averaging=True):
+
+
+
+
+def sentence_rouge_l(references, candidate, beta=1, averaging=True):
     ''' It calculates the rouge-l score between the candidate
     and the reference at the sentence level.
     
@@ -85,7 +130,7 @@ def sentence_rouge_l(references, candidate, beta, averaging=True):
     :param beta : user-defined parameter
     :type beta : float
     
-    rouge_l_list : list containing all the rouge scores for
+    score_list : list containing all the rouge scores for
                    every reference against the candidate
     
     r_lcs : recall factor
@@ -94,57 +139,104 @@ def sentence_rouge_l(references, candidate, beta, averaging=True):
     
     score : rouge-l score between a reference sentence and 
     		the candidate sentence
+
+
+    >>> reference = 'police killed the gunman'
+    >>> candidate_1 = 'police kill the gunman'
+    >>> candidate_2 = 'the gunman kill police'
+    >>> ref_list = [reference.split(' ')]
+
+
+    >>> round(sentence_rouge_l(ref_list, candidate_1.split(' ')), 2)
+    0.75
+
+    >>> round(sentence_rouge_l(ref_list, candidate_2.split(' ')), 2)
+    0.5        
+    
     '''
-    rouge_l_list = []
+    score_list = []
     for ref in references:
         r_lcs = rouge_lcs(ref, candidate)/len(ref)
         p_lcs = rouge_lcs(ref, candidate)/len(candidate)
         score = get_score(r_lcs, p_lcs, beta=beta)
-        rouge_l_list.append(score)
-    return jacknifing(rouge_l_list, averaging=averaging)
+        score_list.append(score)
+    return jacknifing(score_list, averaging=averaging)
 
 
-def summary_rouge_l(references, candidate, beta, averaging=True):
+def summary_rouge_l(references, candidate, beta=1, averaging=True):
     ''' It calculates the rouge-l score between the candidate
     and the reference at the summary level.
     
     param references : a corpus of lists of reference sentences, w.r.t. hypotheses
     type (references) : list(list(list(str)))
     
-    param candidate :  a list of hypothesis sentences
+    param candidate :  a list of hypothesis sentences in the candidate
     type (candidate) : list(list(str))
 
     param beta : user-defined parameter
     type (beta) : float
     
-    rouge_l_list : list containing all the rouge scores for
-                   every reference against the candidate
+    score_list : list containing all the rouge-l scores for
+                 every reference against the candidate at the
+                 summary level. 
+
     
     r_lcs : recall factor
     
     p_lcs : precision factor
     
     score : rouge-l score between a reference and the candidate
+
+
+
+    >>> reference = 'police killed the gunman'
+    >>> candidate_1 = 'police kill the gunman'
+    >>> candidate_2 = 'the gunman kill police'
+    >>> ref_list = [[reference.split(' ')]]
+
+    >>> round(summary_rouge_l(ref_list, [candidate_1.split(' ')]), 2)
+    0.75
+
+    >>> round(summary_rouge_l(ref_list, [candidate_2.split(' ')]), 2)
+    0.5
+    
     '''
-    rouge_l_list = []
-    cand_sent_list = sentence_tokenizer.tokenize(candidate)
-    for ref in references:
-        ref_sent_list = sentence_tokenizer.tokenize(ref)
-        sum_value = 0
-        for ref_sent in ref_sent_list:
-            l_ = []
-            arg1 = tokenizer.tokenize(ref_sent)
-            for cand_sent in cand_sent_list:
-                arg2 = tokenizer.tokenize(cand_sent)
-                d = tokenizer.tokenize(lcs(arg1, arg2,
-                                       len(arg1), len(arg2))[1])
+    score_list = []
+    
+    total_candidate_words = 0 # variable calculating the  total words in the candidate
+    
+    for cand_sent in candidate: # iterating over the word-tokenized candidate sentences
+
+        total_candidate_words += len(cand_sent)
+
+
+    for ref in references: # iterating over the list of references
+                
+        union_value = 0 # variable counting the length of Union LCS between 
+                      # every reference sent. and candidate sent.
+        
+        total_reference_words = 0 # variable counting the total words in a reference 
+        
+        for ref_sent in ref:      # iterating over reference sentences
+            
+            l_ = [] # list storing the LCS words (duplicates included) for a reference 
+                    # sentence and all the candidate sentences.
+            
+            total_reference_words += len(ref_sent)
+            
+            for cand_sent in candidate:  # iterating over candidate sentences
+                
+                d = rouge_lcs(ref_sent, cand_sent,return_string=True).strip(' ').split(' ') 
+                                       
                 l_ += d
-            sum_value = sum_value+len(np.unique(l_))
-        r_lcs = sum_value/len(tokenizer.tokenize(ref))
-        p_lcs = sum_value/len(tokenizer.tokenize(candidate))
+             
+            union_value = (union_value+len(set(l_)))/len(l_)
+            
+        r_lcs = union_value/total_reference_words
+        p_lcs = union_value/total_candidate_words
         score = get_score(r_lcs, p_lcs, beta=beta)
-        rouge_l_list.append(score)
-    return jacknifing(rouge_l_list, averaging=averaging)
+        score_list.append(score)
+    return jacknifing(score_list, averaging=averaging)
 
 
 def normalized_pairwise_lcs(references, candidate, beta, averaging=True):
@@ -263,3 +355,4 @@ def rouge_s(references, candidate, beta, d_skip=None,
         score = get_score(r_skip, p_skip, beta)
         rouge_s_list.append(score)
     return jacknifing(rouge_s_list, averaging=averaging)
+

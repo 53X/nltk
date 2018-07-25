@@ -3,14 +3,33 @@
 
 def jacknifing(score_list, averaging=True):
         ''' This is a averaging function for calculating ROUGE score
-    when multiple references are present. This technique has been
-    referred to as the Jacknifing technique in the original paper.
+    when multiple references are present. In this technique, from a 
+    given list of m values, m unique sets of m-1 elements is created.
+    Then the maximum is calculated from each of this m sets. The 
+    averaging is then performed on the m maximum values thus obtained.
+    This technique has been referred to as the Jacknifing technique 
+    in the original paper that introduces ROUGE-SCORE.
+
 
     param score_list : list of scores over which averaging occurs
     type (score_list) : list
 
     param averaging : Jacknifing occurs if averaging is True
     type (averaging) : boolean
+
+    >>> scores=[10, 20, 30, 40]
+    
+    >>> jacknifing(scores, averaging=False)
+    [10, 20, 30, 40]
+
+    >>> jacknifing(scores, averaging=True)
+    37.5
+
+    >>> scores =[10]
+    
+    >>> jacknifing(scores)
+    10.0
+
 
     '''
         if(len(score_list) == 1):
@@ -52,6 +71,19 @@ def rouge_lcs(X, Y, weighted=False, return_string=False):
 
     param weighted : Weighted LCS is done if weighted is True
     type (weighted) : Boolean
+
+    >>> string1 = 'police killed the gunman'
+    >>> string2 = 'police kill the gunman'
+    
+    >>> rouge_lcs(string1.split(' '), string2.split(' '), return_string=True)
+    'police the gunman '
+
+    >>> rouge_lcs(string1.split(' '), string2.split(' '))
+    3
+
+    >>> round(rouge_lcs(string1.split(' '), string2.split(' '), weighted=True), 3)
+    2.414
+
     '''
     m, n = len(X), len(Y)
 
@@ -98,21 +130,3 @@ def rouge_lcs(X, Y, weighted=False, return_string=False):
         else:
             j -= 1
     return (" ".join(lcs))  # the lcs string
-
-
-def demo():
-    string_1 = 'police killed the gunman'
-    string_2 = 'police kill the gunman'
-    lcs_var = rouge_lcs(string_1.split(), string_2.split(),
-                        weighted=False, return_string=False)
-    print(" Length of the LCS btw string_1 and string_2 :", lcs_var)
-    lcs_var = rouge_lcs(string_1.split(), string_2.split(),
-                        weighted=False, return_string=True)
-    print(" LCS of string_1 and string_2 :", lcs_var)
-    scores = [10, 20, 30, 40]
-    print('Averaged value:', jacknifing(scores))
-    print('Unaveraged value:', jacknifing(scores, averaging=False))
-
-
-if __name__ == '__main__':
-    demo()
