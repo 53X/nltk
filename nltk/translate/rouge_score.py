@@ -4,7 +4,7 @@ http://www.aclweb.org/anthology/W04-1013
 '''
 
 from nltk.util import ngrams, skipgrams
-from util import jacknifing, rouge_lcs
+from util import jacknifing, rouge_lcs, f
 import numpy as np
 
 
@@ -175,6 +175,9 @@ def summary_rouge_l(references, candidate, beta=1, averaging=True):
 
     param beta : user-defined parameter
     type (beta) : float
+
+    :param averaging : Jacknifing occurs if averaging is True
+    :type averaging : Boolean
     
     score_list : list containing all the rouge-l scores for
                  every reference against the candidate at the
@@ -203,7 +206,11 @@ def summary_rouge_l(references, candidate, beta=1, averaging=True):
     '''
     score_list = []
     
-    total_candidate_words = 0 # variable calculating the  total words in the candidate
+    '''
+    total_candidate_words : variable calculating the total words in the candidate
+    '''
+
+    total_candidate_words = 0
     
     for cand_sent in candidate: # iterating over the word-tokenized candidate sentences
 
@@ -212,16 +219,29 @@ def summary_rouge_l(references, candidate, beta=1, averaging=True):
 
     for ref in references: # iterating over the list of references
                 
-        union_value = 0 # variable counting the length of Union LCS between 
-                      # every reference sent. and candidate sent.
+        '''
+        union_value : variable counting the length of Union LCS between
+                      every reference sentence and candidate sentence
+        '''               
+
+        union_value = 0                      
         
-        total_reference_words = 0 # variable counting the total words in a reference 
+        '''
+        total_reference_words : variable counting the total words in a reference
+        
+        '''
+        
+        total_reference_words = 0   
         
         for ref_sent in ref:      # iterating over reference sentences
             
-            l_ = [] # list storing the LCS words (duplicates included) for a reference 
-                    # sentence and all the candidate sentences.
+            '''
+            l_ : list storing the LCS words (duplicates included) for a reference
+                 sentence and all the candidate sentences.
+            '''     
             
+            l_ = []   
+                        
             total_reference_words += len(ref_sent)
             
             for cand_sent in candidate:  # iterating over candidate sentences
@@ -243,24 +263,23 @@ def normalized_pairwise_lcs(references, candidate, beta, averaging=True):
     ''' It calculates the normalized pairwaise lcs score
     between the candidate and the reference at the summary level.
     
-    param references : a corpus of lists of reference sentences, w.r.t. hypotheses
-    type references : list(list(list(str)))
+    param references : a corpus of lists of reference sentences each tokenized into words
+    type references : list(list(str)))
     
-    param candidate : a list of candidate sentences
-    type candidate : list(list(str))
-    
+    param candidate : candidate sentence which is tokenized into words
+    type candidate : list(str)
+
     param beta : parameter for the calculation of F-Score
     type beta : float
 
+    :param averaging : Jacknifing occurs if averaging is True
+    :type averaging : Boolean
+
+    
+
     normalized_list : list containing all the scores for
                       every reference against the candidate
-    cand_sent_list = list of sentences in the candidate
-    ref_sent_list = list of sentences in the reference
-    arg1 = list of words in a sentence of a reference
-    arg2 = list of words in a sentence of a candidate
-    scr = list having the max values of lcs for every reference
-          sentence when it are compared with every candidate
-          sentence.
+    
     r_lcs : recall factor
     
     p_lcs : precision factor
@@ -268,19 +287,44 @@ def normalized_pairwise_lcs(references, candidate, beta, averaging=True):
     score : desired score between a reference and the candidate
     '''
     normalized_list = []
-    cand_sent_list = sentence_tokenizer.tokenize(candidate)
-    for ref in references:
-        ref_sent_list = sentence_tokenizer.tokenize(ref)
+    
+    '''
+    candidate_word_count : word count for the candidate sentence
+
+    '''
+
+    candidate_word_count = 0
+    for ref in references: #iterating over the references
+        
+        '''
+        scr : list storing the maximum lcs scores between every reference
+              sentence and the candidate sentences.
+        '''      
+
         scr = []
-        for r_sent in ref_sent_list:
-            s = []
-            arg1 = tokenizer.tokenize(r_sent)
-            for c_sent in candidate:
-                arg2 = tokenizer.tokenize(c_sent)
-                s.append(lcs(arg1, arg2, len(arg1), len(arg2))[0])
+        
+        '''
+        reference_word_count : total words in the reference
+
+        '''
+
+        reference_word_count = 0
+        
+        for r_sent in ref: #iterating over the sentences of a reference
+            
+            '''
+            s : list storing the lcs length of the reference sentence
+                and every candidate sentence
+            '''    
+
+            s = [] 
+            
+            for c_sent in candidate: #iterating over the sentences of the candidate #SHORTEN THIS 
+                
+                s.append(rouge_lcs(r_sent, c_sent))
             scr.append(max(s))
-        r_lcs = 2*sum(scr)/len(tokenizer.tokenize(ref))
-        p_lcs = 2*sum(scr)/len(tokenizer.tokenize(candidate))
+        r_lcs = 2*sum(scr)/reference_word_count
+        p_lcs = 2*sum(scr)/candidate_word_count
         score = get_score(r_lcs, p_lcs, beta=beta)
         normalized_list.append(score)
     return jacknifing(normalized_list, averaging=averaging)
@@ -292,20 +336,20 @@ def rouge_s(references, candidate, beta, d_skip=None,
     It implements the ROUGE-S and ROUGE-SU scores.
     The skip-bigram concept has been used here.
     
-    :param references : list of all references where all refernces 
+    :param references : list of all references where all references 
                        have been tokenized into words
-    :type references : list
+    :type references : list(list(str))
 
-    :param candidate : list of words in the candidate string
-    :type candidate : list
+    :param candidate : list of word in the candidate string
+    :type candidate : list(str)
 
     :param beta : user-defined parameter for the calculation 
-                 of F1 score
-    : type beta : float             
+                  of F1 score
+    :type beta : float             
     
 
-    :param d_skip : the distance(k) parameter for skipgram
-    : type d_skip : int
+    :param d_skip : the skip_distance(k) parameter for skipgram
+    :type d_skip : int
     
 
     :param smoothing : setting this to True allows for
@@ -313,15 +357,19 @@ def rouge_s(references, candidate, beta, d_skip=None,
                        implementation helps in the unigram
                        smoothing.
     :type smoothing : boolean
-                      
+
+    :param averaging : Jacknifing occurs if averaging is True
+    :type averaging : Boolean
+
+
      
     k_c : distance parameter for candidate in the skipgram
     
     k_ref : distance parameter for reference in the skipgram
     
-    cand_skip_list : list of all skipgrams of the candidate
+    cand_skipgram : list of all skipgrams of the candidate
     
-    ref_skip_list : list of all skipgrams of the reference
+    ref_skipgram : list of all skipgrams of the reference
     
     r_skip : recall factor
     
@@ -329,30 +377,115 @@ def rouge_s(references, candidate, beta, d_skip=None,
     
     score : rouge-s(or SU) score between a reference and the candidate
 
-    rouge_s_list : list of the rouge-s ( or SU) scores
+    count : variable counting the no. of matching skipgrams between the 
+            candidate and the reference
+
+    rouge_s_list : list of the Rouge-S ( or SU) scores
                    for every reference and the candidate
     
     '''
     rouge_s_list = []
+
     k_c = len(candidate) if d_skip is None else d_skip
-    cand_skip_list = list(skipgrams(candidate, n=2, k=k_c))
-    for ref in references:
+    cand_skipgram = list(skipgrams(candidate, n=2, k=k_c))
+    
+    for ref in references: #iterating over each reference
+        
         k_ref = len(ref) if d_skip is None else d_skip
-        ref_skip_list = list(skipgrams(ref, n=2, k=k_ref))
+        ref_skipgram = list(skipgrams(ref, n=2, k=k_ref))
+        
+        
         count = 0
-        for bigram in cand_skip_list:
-            if bigram in ref_skip_list:
-                count = count+1
-        if not smoothing:
-            r_skip = count/len(ref_skip_list)
-            p_skip = count/len(cand_skip_list)
-        else:
-            for ungm in candidate:
-                if ungm in ref:
+        for bigram in cand_skipgram:
+            if bigram in ref_skipgram:
+                count += 1
+        ''' 
+        Calculating ROUGE-S  precision and recall factors:
+
+        '''
+
+        r_skip = count/len(ref_skip_list)
+        p_skip = count/len(cand_skip_list)
+        
+            
+
+        if smoothing:
+
+
+            '''
+            Calculating ROUGE-SU by applying unigram smoothing
+
+            '''
+
+            for unigram in candidate: # iterating over candidate unigrams
+                
+                if unigram in ref: # checking the presence of common of unigrams with reference 
                     count += 1
+            
+
             r_skip = count/(len(ref_skip_list)+len(ref))
             p_skip = count/(len(cand_skip_list)+len(cand))
+        
         score = get_score(r_skip, p_skip, beta)
         rouge_s_list.append(score)
     return jacknifing(rouge_s_list, averaging=averaging)
+
+
+
+
+def weighted_rouge(references, candidate, beta=1, averaging=True):
+
+    '''
+    This function implements the weighted rouge score(ROUGE-W) 
+    between a reference and the candidate sentence by utilizing
+    the weighted-lcs value between the reference and the candidate 
+    sentence.
+
+    :param references : list of all references where all references 
+                       have been tokenized into words
+    :type references : list(list(str))
+
+    :param candidate : list of word in the candidate string
+    :type candidate : list(str)
+
+    :param beta : user-defined parameter for the calculation 
+                  of F1 score
+    :type beta : float  
+
+    :param averaging : Jacknifing occurs if averaging is True
+    :type averaging : Boolean      
+
+    
+
+    rouge_w_list : list storing rouge_w score between every reference 
+                   and the candidate
+    '''
+                   
+    rouge_w_list = []
+    
+    for ref in references:
+
+        '''
+        weighted_score : weighted lcs score between reference and candidate
+
+        '''
+
+        weighted_score = rouge_lcs(ref, candidate, weighted=True)
+        
+        '''
+        Calculating:
+
+        p_lcs : the precision factor
+        r_lcs : the recall factor
+
+        '''
+        r_lcs = f(weighted_score/f(len(ref), inverse=False), inverse=True)
+        p_lcs = f(weighted_score/f(len(candidate), inverse=False), inverse=True)
+
+
+        score = get_score(r_lcs, p_lcs)
+        rouge_w_list.append(score)
+    return jacknifing(rouge_w_list, averaging=averaging)    
+
+
 

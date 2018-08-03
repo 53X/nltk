@@ -50,13 +50,24 @@ def jacknifing(score_list, averaging=True):
             return sum(average)/len(average)
 
 
-def f(k):
+def f(k,  alpha=2, inverse=True):
     '''Weighting function of the Longest-Common-Subsequence
 
     param k : parameter entered by user
     type (k) : float
+
+    param alpha : parameter entered by user
+    type(alpha) : float
+    
+    param inverse : parameter entered by user which decides whether 
+                    to return the function or it's inverse
+    type(inverse) : boolean                
+
     '''
-    return k**0.5
+    
+    return k**(1/alpha) if inverse else k**alpha
+
+        
 
 
 def rouge_lcs(X, Y, weighted=False, return_string=False):
