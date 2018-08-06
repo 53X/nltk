@@ -298,6 +298,8 @@ class Lemma(_WordNetObject):
 
     def _related(self, relation_symbol):
         get_synset = self._wordnet_corpus_reader.synset_from_pos_and_offset
+        if (self._name, relation_symbol) not in self._synset._lemma_pointers:
+            return []
         return [
             get_synset(pos, offset)._lemmas[lemma_index]
             for pos, offset, lemma_index
@@ -434,7 +436,7 @@ class Synset(_WordNetObject):
         else:
             self._wordnet_corpus_reader._load_lang_data(lang)
 
-            i = self._wordnet_corpus_reader.ss2of(self)
+            i = self._wordnet_corpus_reader.ss2of(self, lang)
             if i in self._wordnet_corpus_reader._lang_data[lang][0]:
                 return self._wordnet_corpus_reader._lang_data[lang][0][i]
             else:
@@ -1033,6 +1035,8 @@ class Synset(_WordNetObject):
 
     def _related(self, relation_symbol, sort=True):
         get_synset = self._wordnet_corpus_reader.synset_from_pos_and_offset
+        if relation_symbol not in self._pointers:
+            return []
         pointer_tuples = self._pointers[relation_symbol]
         r = [get_synset(pos, offset) for pos, offset in pointer_tuples]
         if sort:
@@ -1122,9 +1126,13 @@ class WordNetCorpusReader(CorpusReader):
         ''' take an id and return the synsets '''
         return self.synset_from_pos_and_offset(of[-1], int(of[:8]))
 
-    def ss2of(self, ss):
+    def ss2of(self, ss, lang=None):
         ''' return the ID of the synset '''
-        return ("{:08d}-{}".format(ss.offset(), ss.pos()))
+        pos = ss.pos()
+        # Only these 3 WordNets retain the satellite pos tag
+        if lang not in ["nld", "lit", "slk"] and pos == 's':
+            pos = 'a'
+        return ("{:08d}-{}".format(ss.offset(), pos))
 
     def _load_lang_data(self, lang):
         ''' load the wordnet data of the requested language from the file to
@@ -1545,10 +1553,11 @@ class WordNetCorpusReader(CorpusReader):
         else:
             self._load_lang_data(lang)
             synset_list = []
-            for l in self._lang_data[lang][1][lemma]:
-                if pos is not None and l[-1] != pos:
-                    continue
-                synset_list.append(self.of2ss(l))
+            if lemma in self._lang_data[lang][1]:
+                for l in self._lang_data[lang][1][lemma]:
+                    if pos is not None and l[-1] != pos:
+                        continue
+                    synset_list.append(self.of2ss(l))
             return synset_list
 
     def lemmas(self, lemma, pos=None, lang='eng'):
@@ -1942,6 +1951,9 @@ class WordNetCorpusReader(CorpusReader):
                 word = l.split('\t')
                 self._lang_data[lang][0][word[0]].append(word[2])
                 self._lang_data[lang][1][word[2].lower()].append(word[0])
+        # Make sure no more entries are accidentally added subsequently
+        self._lang_data[lang][0].default_factory = None
+        self._lang_data[lang][1].default_factory = None
 
 
 ######################################################################
