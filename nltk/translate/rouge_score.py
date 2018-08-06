@@ -4,8 +4,12 @@ http://www.aclweb.org/anthology/W04-1013
 '''
 
 from nltk.util import ngrams, skipgrams
+<<<<<<< HEAD
 from util import jacknifing, rouge_lcs, f
 import numpy as np
+=======
+from util import *
+>>>>>>> e54e010e865f7b1497c34f14c8a2e7c73a2a9c01
 
 
 def get_score(r_lcs, p_lcs, beta=1):
@@ -317,12 +321,18 @@ def normalized_pairwise_lcs(references, candidate, beta, averaging=True):
                 and every candidate sentence
             '''    
 
+<<<<<<< HEAD
             s = [] 
             
             for c_sent in candidate: #iterating over the sentences of the candidate #SHORTEN THIS 
                 
                 s.append(rouge_lcs(r_sent, c_sent))
             scr.append(max(s))
+=======
+            s = [rouge_lcs(r_sent, c_sent) for c_sent in candidate] 
+            scr.append(max(s))
+        
+>>>>>>> e54e010e865f7b1497c34f14c8a2e7c73a2a9c01
         r_lcs = 2*sum(scr)/reference_word_count
         p_lcs = 2*sum(scr)/candidate_word_count
         score = get_score(r_lcs, p_lcs, beta=beta)
